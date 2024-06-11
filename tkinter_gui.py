@@ -1,4 +1,5 @@
 import tkinter as tk
+import customtkinter as ctk
 from tkinter import ttk
 
 class GUI:
@@ -7,87 +8,94 @@ class GUI:
         self.root.title('News Dash')
 
         # Set the background color
-        bg_color = "gray50"
-        self.root.configure(bg=bg_color)
+        self.root.configure()
         
         # Get the dimensions of the root window
         root.update_idletasks()
-        width = root.winfo_width()
-        height = root.winfo_height()
+        self.width = root.winfo_width()
+        self.height = root.winfo_height()
         
         # Define some margins
         margin = 20
         inner_margin = 10
 
         # Define the widths and heights of the sections
-        left_right_width = width // 6
-        center_width = width - 2 * left_right_width - 5 * margin
-        large_rect_height = (height - 6 * margin) * 3 // 4 - inner_margin
-        small_rect_height = (height - 2 * margin) // 4 - inner_margin
+        left_right_width = self.width // 6
+        center_width = self.width - 2 * left_right_width - 5 * margin
+        large_rect_height = (self.height - 6 * margin) * 3 // 4 - inner_margin
+        small_rect_height = (self.height - 2 * margin) // 4 - inner_margin
 
         # Define the heights for left and right rectangles
-        left_right_large_height = (height - 2 * margin - inner_margin) * 2 // 3
-        left_right_small_height = (height - 2 * margin - inner_margin) // 3
+        left_right_large_height = (self.height - 2 * margin - inner_margin) * 2 // 3
+        left_right_small_height = (self.height - 2 * margin - inner_margin) // 3
 
+        ### Headline scroll window
         # Create and place the left column larger rectangle
-        headline_window = tk.Frame(root, bg=bg_color, width=left_right_width, height=left_right_large_height, highlightbackground="white", highlightthickness=2)
+        headline_window = ctk.CTkScrollableFrame(root, width=left_right_width, height=left_right_large_height, border_color='red')
         headline_window.place(x=margin, y=margin)
+  
+        # Fill the frame with headlines
+        self.fill_with_headlines(headline_window)
 
         # Create and place the left column smaller rectangle
-        headline_portfolio = tk.Frame(root, bg=bg_color, width=left_right_width, height=left_right_small_height, highlightbackground="white", highlightthickness=2)
+        headline_portfolio = tk.Frame(root, width=left_right_width, height=left_right_small_height, highlightbackground="white", highlightthickness=2)
         headline_portfolio.place(x=margin, y=margin + left_right_large_height + inner_margin)
 
         # Create and place the right column larger rectangle
-        keyword_window = tk.Frame(root, bg=bg_color, width=left_right_width, height=left_right_large_height, highlightbackground="white", highlightthickness=2)
-        keyword_window.place(x=width - left_right_width - margin, y=margin)
+        keyword_window = tk.Frame(root, width=left_right_width, height=left_right_large_height, highlightbackground="white", highlightthickness=2)
+        keyword_window.place(x=self.width - left_right_width - margin, y=margin)
 
         # Create and place the right column smaller rectangle
-        top_keywords = tk.Frame(root, bg=bg_color, width=left_right_width, height=left_right_small_height, highlightbackground="white", highlightthickness=2)
-        top_keywords.place(x=width - left_right_width - margin, y=margin + left_right_large_height + inner_margin)
+        top_keywords = tk.Frame(root, width=left_right_width, height=left_right_small_height, highlightbackground="white", highlightthickness=2)
+        top_keywords.place(x=self.width - left_right_width - margin, y=margin + left_right_large_height + inner_margin)
 
         # Create and place the large rectangle in the center
-        stock_history = tk.Frame(root, bg=bg_color, width=center_width, height=large_rect_height, highlightbackground="white", highlightthickness=2)
+        stock_history = tk.Frame(root, width=center_width, height=large_rect_height, highlightbackground="white", highlightthickness=2)
         stock_history.place(x=left_right_width + margin*2 + inner_margin, y=margin + inner_margin)
 
         # Create and place the small rectangle below the large rectangle
-        personal_portfolio = tk.Frame(root, bg=bg_color, width=center_width, height=small_rect_height, highlightbackground="white", highlightthickness=2)
+        personal_portfolio = tk.Frame(root, width=center_width, height=small_rect_height, highlightbackground="white", highlightthickness=2)
         personal_portfolio.place(x=left_right_width + margin*2 + inner_margin, y=margin + large_rect_height + 2 * inner_margin)
 
-        '''
-        # Main frame
-        main_frame = tk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH,expand=1)
+        # Bottom toolbar
+        toolbar = tk.Frame(root,background='gray15')
+        toolbar.pack(side=tk.BOTTOM)
 
-        ##### Scrollable window #####
-        
-        # Create a canvas
-        canvas = tk.Canvas(main_frame)
-        canvas.pack(side=tk.LEFT,fill=tk.BOTH,expand=1)
+        buttons = ['1D', '1W', '1M', '3M', '6M', '1Y', '5Y']
 
-        # Add a scrollbard to the canvas
-        scrollbar = ttk.Scrollbar(main_frame,orient=tk.VERTICAL,command=canvas.yview)
-        scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
+        for button_label in buttons:
+            button = HighlightButton(toolbar, text=button_label,fg_color='transparent',width=12)
+            button.pack(side=tk.LEFT,padx=10,pady=15)
 
-        # Configure the canvas
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    def fill_with_headlines(self,frame):
+        headlines = [
+            'BA\nBoeing goes the absolute moon thank god',
+            'printing money just go easier with insurance fraud',
+            'Magnificent 7 is still a great investment even though we are headed for recession',
+            'Im hoping this tkinter thing works with long headlines',
+            'TSLA\nTesla is absolutely goated with the sauce',
+            'printing money just go easier with insurance fraud',
+            'Magnificent 7 is still a great investment even though we are headed for recession',
+            'Im hoping this tkinter thing works with long headlines',
+            'JD\nJohn Deer goes the absolute moon thank god',
+        ]
 
-        # Create another frame inside the canvas
-        self.scrollable_frame = tk.Frame(canvas)
+        for item in headlines:
+            ctk.CTkLabel(frame,text=item,justify='left',wraplength=self.width//6).pack(pady=4,anchor='w')
 
-        # add that new frame to the window of the canvas
-        canvas.create_window((0,0), window=self.scrollable_frame, anchor="nw")
 
-        # Fill the frame with items
-        for item in items:
-            ttk.Label(self.scrollable_frame,text=item).pack(pady=5,padx=10,anchor='w')
+class HighlightButton(ctk.CTkButton):
+    def __init__(self,master=None,**kwargs):
+        super().__init__(master,**kwargs)
+        self.master = master
+        self.default_bg = 'gray15'
+        self.highlight_bg = 'gray25'
 
-        #################################
-        '''
+        self.configure(fg_color=self.default_bg)
 
-    def get_data(self):
-        data1 = self.entry1.get()
-        data2 = self.entry2.get()
+        self.bind("<Button-1>", self.on_press)
 
-        print(f"Data from box 1: {data1}")
-        print(f"Data from box 2: {data2}")
+    def on_press(self,event):
+        for button in self.master.winfo_children():
+                button.configure(fg_color=self.default_bg)
+        self.configure(fg_color=self.highlight_bg)
