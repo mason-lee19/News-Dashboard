@@ -2,6 +2,12 @@ import tkinter as tk
 import customtkinter as ctk
 from tkinter import ttk
 
+BORDER_COLOR = 'White'
+BORDER_THICKNESS = 2
+BG_COLOR = 'gray15'
+BG_WINDOW_COLOR = 'gray17'
+
+
 class GUI:
     def __init__(self,root):
         self.root = root
@@ -30,44 +36,56 @@ class GUI:
         left_right_small_height = (self.height - 2 * margin - inner_margin) // 3
 
         ### Headline scroll window
-        # Create and place the left column larger rectangle
-        headline_window = ctk.CTkScrollableFrame(root, width=left_right_width, height=left_right_large_height, border_color='red')
+        headline_window = HeadlineScrollWindow(root, width=left_right_width-inner_margin, height=left_right_large_height-inner_margin, 
+                                               border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
         headline_window.place(x=margin, y=margin)
-  
-        # Fill the frame with headlines
-        self.fill_with_headlines(headline_window)
+        headline_window.fill_with_headlines(headline_window)
 
-        # Create and place the left column smaller rectangle
-        headline_portfolio = tk.Frame(root, width=left_right_width, height=left_right_small_height, highlightbackground="white", highlightthickness=2)
+        ### Portfolio based on headline ticker activity
+        headline_portfolio = tk.Frame(root, width=left_right_width, height=left_right_small_height, 
+                                      highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         headline_portfolio.place(x=margin, y=margin + left_right_large_height + inner_margin)
 
-        # Create and place the right column larger rectangle
-        keyword_window = tk.Frame(root, width=left_right_width, height=left_right_large_height, highlightbackground="white", highlightthickness=2)
+        ### Keyword monitor window
+        keyword_window = tk.Frame(root, width=left_right_width, height=left_right_large_height,
+                                  highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         keyword_window.place(x=self.width - left_right_width - margin, y=margin)
 
-        # Create and place the right column smaller rectangle
-        top_keywords = tk.Frame(root, width=left_right_width, height=left_right_small_height, highlightbackground="white", highlightthickness=2)
+        ### Call Volume or top keyword window
+        top_keywords = tk.Frame(root, width=left_right_width, height=left_right_small_height,
+                                highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         top_keywords.place(x=self.width - left_right_width - margin, y=margin + left_right_large_height + inner_margin)
 
-        # Create and place the large rectangle in the center
-        stock_history = tk.Frame(root, width=center_width, height=large_rect_height, highlightbackground="white", highlightthickness=2)
+        ### Ticker history viewer
+        stock_history = tk.Frame(root, width=center_width, height=large_rect_height,
+                                 highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         stock_history.place(x=left_right_width + margin*2 + inner_margin, y=margin + inner_margin)
 
-        # Create and place the small rectangle below the large rectangle
-        personal_portfolio = tk.Frame(root, width=center_width, height=small_rect_height, highlightbackground="white", highlightthickness=2)
-        personal_portfolio.place(x=left_right_width + margin*2 + inner_margin, y=margin + large_rect_height + 2 * inner_margin)
+        ### Personal portfolio window
+        personal_ticker_window = TickerGrid(root,width=center_width, height=small_rect_height,
+                                            border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
+        personal_ticker_window.place(x=left_right_width + margin*2 + inner_margin, y=margin + large_rect_height + 2 * inner_margin)
+        personal_ticker_window.create_grid(personal_ticker_window)
 
-        # Bottom toolbar
-        toolbar = tk.Frame(root,background='gray15')
+        ### Bottom toolbar
+        toolbar = tk.Frame(root,background=BG_COLOR)
         toolbar.pack(side=tk.BOTTOM)
 
-        buttons = ['1D', '1W', '1M', '3M', '6M', '1Y', '5Y']
+        buttons = ['1D','1W','1M','3M','6M','1Y','5Y']
 
         for button_label in buttons:
             button = HighlightButton(toolbar, text=button_label,fg_color='transparent',width=12)
             button.pack(side=tk.LEFT,padx=10,pady=15)
 
+
+class HeadlineScrollWindow(ctk.CTkScrollableFrame):
+    def __init__(self,master=None,**kwargs):
+        super().__init__(master,**kwargs)
+
+        self.master = master
+
     def fill_with_headlines(self,frame):
+        ### Will replace with db pull of headline data
         headlines = [
             'BA\nBoeing goes the absolute moon thank god',
             'printing money just go easier with insurance fraud',
@@ -78,17 +96,22 @@ class GUI:
             'Magnificent 7 is still a great investment even though we are headed for recession',
             'Im hoping this tkinter thing works with long headlines',
             'JD\nJohn Deer goes the absolute moon thank god',
+            'TSLA\nTesla is absolutely goated with the sauce',
+            'printing money just go easier with insurance fraud',
+            'Magnificent 7 is still a great investment even though we are headed for recession',
+            'Im hoping this tkinter thing works with long headlines',
+            'JD\nJohn Deer goes the absolute moon thank god',
         ]
 
         for item in headlines:
-            ctk.CTkLabel(frame,text=item,justify='left',wraplength=self.width//6).pack(pady=4,anchor='w')
+            ctk.CTkLabel(frame,text=item,justify='left',wraplength=self.master.winfo_width()//6).pack(pady=4,anchor='w')
 
 
 class HighlightButton(ctk.CTkButton):
     def __init__(self,master=None,**kwargs):
         super().__init__(master,**kwargs)
         self.master = master
-        self.default_bg = 'gray15'
+        self.default_bg = BG_COLOR
         self.highlight_bg = 'gray25'
 
         self.configure(fg_color=self.default_bg)
@@ -96,6 +119,32 @@ class HighlightButton(ctk.CTkButton):
         self.bind("<Button-1>", self.on_press)
 
     def on_press(self,event):
+        ### Update to change time frame on press depending on button
         for button in self.master.winfo_children():
                 button.configure(fg_color=self.default_bg)
         self.configure(fg_color=self.highlight_bg)
+
+class TickerGrid(ctk.CTkFrame):
+    def __init__(self,master=None,**kwargs):
+        super().__init__(master,**kwargs)
+
+    def create_grid(self,frame):
+        ### Will replace with ticker pulling function
+        tickers = {
+            'AAPL': 1.23,
+            'BA': -0.40,
+            'GOOGL': 4.56,
+            'TSLA': -3.87,
+        }
+
+        for i, (ticker,percentage) in enumerate(tickers.items()):
+            ticker_label = tk.Label(frame, text=ticker,fg='white',padx=10,pady=5,bg=BG_WINDOW_COLOR)
+            ticker_label.grid(row=i,column=0,sticky='w',padx=5,pady=5)
+
+            percentage_label=tk.Label(frame,text=f'{percentage:.2f}%', fg=self.get_color(percentage),bg=BG_WINDOW_COLOR)
+            percentage_label.grid(row=i, column=1,stick='w',padx=5,pady=5)
+
+    def get_color(self, percentage) -> str:
+        if percentage >= 0:
+            return 'green'
+        return 'red'
