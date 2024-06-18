@@ -5,3 +5,13 @@ NEWS_SOURCE_LIST = [
     'msnbc',
     'the-wall-street-journal'
 ]
+
+TICKERS = [
+    'AAPL',
+    'BA',
+    'GOOGL',
+    'TSLA',
+    'WDC',
+    'COST',
+    'SPR',
+]

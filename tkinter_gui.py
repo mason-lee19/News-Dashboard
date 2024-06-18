@@ -4,10 +4,16 @@ from tkinter import ttk
 import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 
+import config
+from utils.get_stock_data import GetStockData
+from utils.tools import convert_time_frame
+
 BORDER_COLOR = 'White'
 BORDER_THICKNESS = 2
 BG_COLOR = 'gray15'
 BG_WINDOW_COLOR = 'gray17'
+
+DEFAULT_TIME_FRAME = '1D'
 
 
 class GUI:
@@ -76,14 +82,10 @@ class GUI:
         personal_ticker_window.create_grid(ticker_grid_frame)
 
         ### Bottom toolbar
-        toolbar = tk.Frame(root,background=BG_COLOR)
-        toolbar.pack(side=tk.BOTTOM)
+        def on_toolbar_button_press(period):
+            personal_ticker_window.update_tickers(period)
 
-        buttons = ['1D','1W','1M','3M','6M','1Y','5Y']
-
-        for button_label in buttons:
-            button = HighlightButton(toolbar, text=button_label,fg_color='transparent',width=12)
-            button.pack(side=tk.LEFT,padx=10,pady=15)
+        toolbar = Toolbar(root,callback=on_toolbar_button_press)
 
 
 class ScrollWindow(ctk.CTkScrollableFrame):
@@ -122,8 +124,12 @@ class KeywordWindow(ctk.CTkFrame):
 
         self.master = master
 
+        self.image_refs = []
+
     def fill_with_keywords(self,frame):
         ### Will replace with db pull of headline data
+        # Create seperate graph check, and do proper os cleanup of that image and create another
+        # Segmentation fault due to self.create_chart writing over already created same name pngs
         keywords = {
             'nvidia':[1,2,4,6,3,2,1],
             'mason':[5,2,3,5,6,8],
@@ -135,18 +141,24 @@ class KeywordWindow(ctk.CTkFrame):
 
         for i, (word,data) in enumerate(keywords.items()):
             keyword_label = tk.Label(frame,text=word,justify='left',bg=BG_WINDOW_COLOR)
-            #.pack(pady=4,anchor='w')
             keyword_label.grid(row=i,column=0,stick='w',padx=5,pady=5)
-
+            
             graph_image = f'attachments/graph_{i}.png'
 
-            self.create_chart(data,graph_image)
+            #self.create_chart(data,graph_image)
             img = Image.open(graph_image)
             img = ImageTk.PhotoImage(img)
 
+            self.image_refs.append(img)
+            
             graph_label = tk.Label(frame,image=img,bg=BG_WINDOW_COLOR)
             graph_label.image = img
-            graph_label.grid(row=i,column=2,stick='w',padx=30,pady=5)
+            graph_label.grid(row=i,column=1,stick='w',padx=10,pady=5)
+            
+            value_label = tk.Label(frame,text=str(keywords[word][-1]),justify='left',bg=BG_WINDOW_COLOR)
+            value_label.grid(row=i,column=3,stick='w',padx=5,pady=5)
+
+            
 
     def create_chart(self,data,filename):
             color = 'green' if data[0] <= data[-1] else 'red'
@@ -158,9 +170,10 @@ class KeywordWindow(ctk.CTkFrame):
 
 
 class HighlightButton(ctk.CTkButton):
-    def __init__(self,master=None,**kwargs):
+    def __init__(self,master=None,command=None,**kwargs):
         super().__init__(master,**kwargs)
         self.master = master
+        self.callback = command
         self.default_bg = BG_COLOR
         self.highlight_bg = 'gray25'
 
@@ -173,36 +186,65 @@ class HighlightButton(ctk.CTkButton):
         for button in self.master.winfo_children():
                 button.configure(fg_color=self.default_bg)
         self.configure(fg_color=self.highlight_bg)
+        if self.callback:
+            self.callback(self)
+
+class Toolbar(ctk.CTkFrame):
+    def __init__(self,master=None,callback=None,**kwargs):
+        super().__init__(master,**kwargs)
+        self.master = master
+        self.pack(side=tk.BOTTOM)
+
+        self.callback = callback
+
+        self.buttons = []
+        self.selected_button = None
+
+        self.add_button("1D")
+        self.add_button("1W")
+        self.add_button("1M")
+        self.add_button("3M")
+        self.add_button("6M")
+        self.add_button("1Y")
+        self.add_button("5Y")
+
+    def add_button(self,text):
+        button = HighlightButton(self,text=text,fg_color='transparent',width=12,command=self.on_button_press)
+        button.pack(side=tk.LEFT,padx=10,pady=15)
+        self.buttons.append(button)
+
+    def on_button_press(self,button):
+        # Force a refresh of portfolio ticker grid, keyword graphs, main ticker graph
+        print(f'Refreshing for timeframe {button.cget('text')}')
+        if self.callback:
+            self.callback(button.cget('text'))
+    
+    def get_selected_button_text(self):
+        return self.selected_button.cget('text') if self.selected_button else None
+
 
 class TickerGrid(ctk.CTkFrame):
     def __init__(self,master=None,**kwargs):
         super().__init__(master,**kwargs)
 
         self.max_stock_num = 20
+
+        self.tickers = config.TICKERS
+        self.update_ticker_dict()
+
+    def update_ticker_dict(self,period:int=1):
+        # from self.tickers create a default dictionary
+        self.ticker_dict = {key:0.00 for key in self.tickers}
+        # check if we have the ticker data
+
+        # If not we can pull and add to DB
+
+        # Else we can just use the data and pull what the current day
+
+
     def create_grid(self,frame):
-        ### Will replace with ticker pulling function
-        tickers = {
-            'AAPL': 1.23,
-            'BA': -0.40,
-            'GOOGL': 4.56,
-            'TSLA': -3.87,
-            'BLAH': -10.00,
-            'TEST': -5.00,
-            'C': 1.23,
-            'D': -0.40,
-            'E': 4.56,
-            'F': -3.87,
-            'G': -10.00,
-            'H': -5.00,
-            'I': 1.23,
-            'J': -0.40,
-            'K': 4.56,
-            'L': -3.87,
-            'M': -10.00,
-            'N': -5.00,
-        }
         
-        for i, (ticker,percentage) in enumerate(tickers.items()):
+        for i, (ticker,percentage) in enumerate(self.ticker_dict.items()):
             # Only allow certain number of stocks
             if i == self.max_stock_num:
                 break
@@ -219,3 +261,6 @@ class TickerGrid(ctk.CTkFrame):
         if percentage >= 0:
             return 'green'
         return 'red'
+
+    def update_tickers(self,period):
+        self.update_ticker_dict(convert_time_frame(period))
