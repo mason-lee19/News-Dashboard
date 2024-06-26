@@ -1,8 +1,12 @@
 import tkinter as tk
 import customtkinter as ctk
 from tkinter import ttk
-import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
+
+import pandas as pd
+import mplfinance as mpf
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import config
 from utils.get_stock_data import GetStockData
@@ -36,8 +40,11 @@ class GUI:
         # Define the widths and heights of the sections
         left_right_width = self.width // 6
         center_width = self.width - 2 * left_right_width - 5 * margin
+        input_rect_width = left_right_width // 4
         large_rect_height = (self.height - 6 * margin) * 3 // 4 - inner_margin
         small_rect_height = (self.height - 2 * margin) // 4 - inner_margin
+        input_rect_height = margin
+        
 
         # Define the heights for left and right rectangles
         left_right_large_height = (self.height - 2 * margin - inner_margin) * 2 // 3
@@ -68,12 +75,27 @@ class GUI:
                                 highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         top_keywords.place(x=self.width - left_right_width - margin, y=margin + left_right_large_height + inner_margin)
 
+        ### Ticker input
+        ticker_entry = ctk.CTkEntry(root,width=input_rect_width,height=input_rect_height)
+        ticker_entry.place(x=left_right_width+margin*2+inner_margin,y=margin + inner_margin - .5 * margin)
+
+        ### Ticker plot button
+        def plot_ticker(period:int=1):
+            print(f'plot for ticker {ticker_entry.get()}')
+            self.plot_stock(None,ticker_entry.get(),period,stock_history)
+
+        plot_button = ctk.CTkButton(root,text='Plot',command=plot_ticker,width=input_rect_width,height=input_rect_height,fg_color=BG_WINDOW_COLOR)
+        plot_button.place(x=left_right_width+margin*2+2*inner_margin+input_rect_width,y=margin+inner_margin-.5*margin)
+
         ### Ticker history viewer
-        stock_history = tk.Frame(root, width=center_width, height=large_rect_height,
+        stock_history = tk.Frame(root, width=center_width, height=large_rect_height - 1 * margin,
                                  highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
-        stock_history.place(x=left_right_width + margin*2 + inner_margin, y=margin + inner_margin)
+        stock_history.place(x=left_right_width + margin*2 + inner_margin, y=margin + inner_margin + 1 * margin)
 
         ### Personal portfolio window
+        # Initialize the canvas to place the interactive stock history
+        self.init_canvas()
+
         personal_ticker_window = TickerGrid(root,width=center_width, height=small_rect_height,
                                             border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
         ticker_grid_frame = TickerGrid(root,width=center_width-10, height=small_rect_height-10)
@@ -83,9 +105,42 @@ class GUI:
 
         ### Bottom toolbar
         def on_toolbar_button_press(period):
-            personal_ticker_window.update_tickers(period)
+            period_int = convert_time_frame(period)
+            personal_ticker_window.update_tickers(period_int)
+            plot_ticker(period)
 
         toolbar = Toolbar(root,callback=on_toolbar_button_press)
+
+    def init_canvas(self):
+        self.canvas = None
+
+    def plot_stock(self,stock_api,ticker:str,period:int,frame):
+        data = {
+            'Date': pd.date_range(start='1/1/2020', periods=100),
+            'Open': pd.Series(range(100)) + 100,
+            'High': pd.Series(range(100)) + 105,
+            'Low': pd.Series(range(100)) + 95,
+            'Close': pd.Series(range(100)) + 100,
+            'Volume': pd.Series(range(100)) * 1000
+        }
+
+        # If there is already a plot we want to destroy and draw another
+        if self.canvas:
+            self.canvas.get_tk_widget().destroy()
+
+        df = pd.DataFrame(data)
+        df.set_index('Date',inplace=True)
+
+        fig,ax = plt.subplots(figsize=(6.9,4.7),facecolor='#393939')
+        ax.set_facecolor('#393939')
+
+        mpf.plot(df,type='candle',ax=ax,mav=(3,6,9))
+
+        self.canvas = FigureCanvasTkAgg(fig,master=frame)
+        self.canvas.get_tk_widget().pack_forget()
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill=ctk.BOTH,expand=True)
+
 
 
 class ScrollWindow(ctk.CTkScrollableFrame):
@@ -263,4 +318,4 @@ class TickerGrid(ctk.CTkFrame):
         return 'red'
 
     def update_tickers(self,period):
-        self.update_ticker_dict(convert_time_frame(period))
+        self.update_ticker_dict(period)

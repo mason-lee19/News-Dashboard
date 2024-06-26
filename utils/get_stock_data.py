@@ -37,7 +37,7 @@ class GetStockData:
 
         return bars_df
 
-    def calc_returns(self,data,dayrange:str='1D'):
+    def calc_returns(self,data,timeframe:int=1):
         pass
 
     
