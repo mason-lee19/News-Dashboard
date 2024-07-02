@@ -10,7 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import config
 from utils.get_stock_data import GetStockData
-from utils.tools import convert_time_frame
+from utils.tools import Utils
 
 BORDER_COLOR = 'White'
 BORDER_THICKNESS = 2
@@ -23,15 +23,19 @@ DEFAULT_TIME_FRAME = '1D'
 class GUI:
     def __init__(self,root):
         self.root = root
-        self.root.title('News Dash')
 
-        # Set the background color
+        self.stock_api = GetStockData()
+
+        self.setup_gui()
+    def setup_gui(self):
+
+        self.root.title('News Dash')
         self.root.configure()
-        
+
         # Get the dimensions of the root window
-        root.update_idletasks()
-        self.width = root.winfo_width()
-        self.height = root.winfo_height()
+        self.root.update_idletasks()
+        self.width = self.root.winfo_width()
+        self.height = self.root.winfo_height()
         
         # Define some margins
         margin = 20
@@ -51,44 +55,44 @@ class GUI:
         left_right_small_height = (self.height - 2 * margin - inner_margin) // 3
 
         ### Headline scroll window
-        headline_window = ScrollWindow(root, label_text='Headlines', width=left_right_width-inner_margin, height=left_right_large_height-(inner_margin*6), 
+        headline_window = ScrollWindow(self.root, label_text='Headlines', width=left_right_width-inner_margin, height=left_right_large_height-(inner_margin*6), 
                                                border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
         headline_window.place(x=margin, y=margin)
         headline_window.fill_with_headlines(headline_window)
 
         ### Portfolio based on headline ticker activity
-        headline_portfolio = tk.Frame(root, width=left_right_width, height=left_right_small_height, 
+        headline_portfolio = tk.Frame(self.root, width=left_right_width, height=left_right_small_height, 
                                       highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         headline_portfolio.place(x=margin, y=margin + left_right_large_height + inner_margin)
 
         ### Keyword monitor window
-        keyword_window = KeywordWindow(root, width=left_right_width+inner_margin, height=left_right_large_height,
+        keyword_window = KeywordWindow(self.root, width=left_right_width+inner_margin, height=left_right_large_height,
                                        border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
         keyword_window.place(x=self.width - left_right_width - margin - inner_margin, y=margin)
-        keyword_grid = KeywordWindow(root, width=left_right_width-inner_margin-10, height=left_right_large_height-(inner_margin*2)-10)
+        keyword_grid = KeywordWindow(self.root, width=left_right_width-inner_margin-10, height=left_right_large_height-(inner_margin*2)-10)
         keyword_grid.place(x=self.width - left_right_width - margin, y=margin + 10)
 
         keyword_grid.fill_with_keywords(keyword_grid)
 
         ### Call Volume or top keyword window
-        top_keywords = tk.Frame(root, width=left_right_width, height=left_right_small_height,
+        top_keywords = tk.Frame(self.root, width=left_right_width, height=left_right_small_height,
                                 highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         top_keywords.place(x=self.width - left_right_width - margin, y=margin + left_right_large_height + inner_margin)
 
         ### Ticker input
-        ticker_entry = ctk.CTkEntry(root,width=input_rect_width,height=input_rect_height)
+        ticker_entry = ctk.CTkEntry(self.root,width=input_rect_width,height=input_rect_height)
         ticker_entry.place(x=left_right_width+margin*2+inner_margin,y=margin + inner_margin - .5 * margin)
 
         ### Ticker plot button
-        def plot_ticker(period:int=1):
+        def plot_ticker(period:str='1D'):
             print(f'plot for ticker {ticker_entry.get()}')
-            self.plot_stock(None,ticker_entry.get(),period,stock_history)
+            self.plot_stock(self.stock_api.apiConfig,ticker_entry.get(),period,stock_history)
 
-        plot_button = ctk.CTkButton(root,text='Plot',command=plot_ticker,width=input_rect_width,height=input_rect_height,fg_color=BG_WINDOW_COLOR)
+        plot_button = ctk.CTkButton(self.root,text='Plot',command=plot_ticker,width=input_rect_width,height=input_rect_height,fg_color=BG_WINDOW_COLOR)
         plot_button.place(x=left_right_width+margin*2+2*inner_margin+input_rect_width,y=margin+inner_margin-.5*margin)
 
         ### Ticker history viewer
-        stock_history = tk.Frame(root, width=center_width, height=large_rect_height - 1 * margin,
+        stock_history = tk.Frame(self.root, width=center_width, height=large_rect_height - 1 * margin,
                                  highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         stock_history.place(x=left_right_width + margin*2 + inner_margin, y=margin + inner_margin + 1 * margin)
 
@@ -96,20 +100,20 @@ class GUI:
         # Initialize the canvas to place the interactive stock history
         self.init_canvas()
 
-        personal_ticker_window = TickerGrid(root,width=center_width, height=small_rect_height,
+        personal_ticker_window = TickerGrid(self.root,width=center_width, height=small_rect_height,
                                             border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
-        ticker_grid_frame = TickerGrid(root,width=center_width-10, height=small_rect_height-10)
+        ticker_grid_frame = TickerGrid(self.root,width=center_width-10, height=small_rect_height-10)
         ticker_grid_frame.place(x=left_right_width + margin*2+35 + inner_margin, y=margin + large_rect_height + 2 * inner_margin+10)
         personal_ticker_window.place(x=left_right_width + margin*2 + inner_margin, y=margin + large_rect_height + 2 * inner_margin)
         personal_ticker_window.create_grid(ticker_grid_frame)
 
         ### Bottom toolbar
         def on_toolbar_button_press(period):
-            period_int = convert_time_frame(period)
-            personal_ticker_window.update_tickers(period_int)
+            personal_ticker_window.update_tickers(self.stock_api,period)
+            personal_ticker_window.create_grid(ticker_grid_frame)
             plot_ticker(period)
 
-        toolbar = Toolbar(root,callback=on_toolbar_button_press)
+        toolbar = Toolbar(self.root,callback=on_toolbar_button_press)
 
     def init_canvas(self):
         self.canvas = None
@@ -123,6 +127,8 @@ class GUI:
             'Close': pd.Series(range(100)) + 100,
             'Volume': pd.Series(range(100)) * 1000
         }
+        # Pull data -> get_stock_data.py will check if we have it in db
+        # daily will have to constantly be updated every time 1D gets pressed
 
         # If there is already a plot we want to destroy and draw another
         if self.canvas:
@@ -132,7 +138,8 @@ class GUI:
         df.set_index('Date',inplace=True)
 
         fig,ax = plt.subplots(figsize=(6.9,4.7),facecolor='#393939')
-        ax.set_facecolor('#393939')
+        plt.title(f'{period} - {ticker}')
+        ax = self.color_axis(ax)
 
         mpf.plot(df,type='candle',ax=ax,mav=(3,6,9))
 
@@ -140,6 +147,23 @@ class GUI:
         self.canvas.get_tk_widget().pack_forget()
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=ctk.BOTH,expand=True)
+
+    def color_axis(self,ax):
+        ax.set_facecolor('#393939')
+        ax.spines['bottom'].set_color('#dddddd')
+        ax.spines['top'].set_color('#dddddd')
+        ax.spines['right'].set_color('#dddddd')
+        ax.spines['left'].set_color('#dddddd')
+
+        ax.tick_params(axis='x', colors='#dddddd')
+        ax.tick_params(axis='y', colors='#dddddd')
+
+        ax.yaxis.label.set_color('#dddddd')
+        ax.xaxis.label.set_color('#dddddd')
+
+        ax.title.set_color('#dddddd')
+
+        return ax
 
 
 
@@ -277,7 +301,6 @@ class Toolbar(ctk.CTkFrame):
     def get_selected_button_text(self):
         return self.selected_button.cget('text') if self.selected_button else None
 
-
 class TickerGrid(ctk.CTkFrame):
     def __init__(self,master=None,**kwargs):
         super().__init__(master,**kwargs)
@@ -285,16 +308,19 @@ class TickerGrid(ctk.CTkFrame):
         self.max_stock_num = 20
 
         self.tickers = config.TICKERS
-        self.update_ticker_dict()
+        #self.update_tickers()
+        self.ticker_dict = {key:0 for key in self.tickers}
 
-    def update_ticker_dict(self,period:int=1):
-        # from self.tickers create a default dictionary
-        self.ticker_dict = {key:0.00 for key in self.tickers}
+    def update_tickers(self,api,period:str='1D'):
         # check if we have the ticker data
+        # maybe add database saving later
 
         # If not we can pull and add to DB
-
-        # Else we can just use the data and pull what the current day
+        for ticker in self.ticker_dict.keys():
+            data = api.get_data(ticker,period)
+            self.ticker_dict[ticker] = float(api.calc_returns(data))
+            
+        print(self.ticker_dict)
 
 
     def create_grid(self,frame):
@@ -309,13 +335,5 @@ class TickerGrid(ctk.CTkFrame):
             ticker_label = tk.Label(frame, text=ticker,fg='white',padx=10,pady=5,bg=BG_WINDOW_COLOR)
             ticker_label.grid(row=row,column=col,sticky='w',padx=5,pady=5)
 
-            percentage_label=tk.Label(frame,text=f'{percentage:.2f}%', fg=self.get_color(percentage),bg=BG_WINDOW_COLOR)
+            percentage_label=tk.Label(frame,text=f'{percentage:.2f}%', fg=Utils.get_color(percentage),bg=BG_WINDOW_COLOR)
             percentage_label.grid(row=row, column=col+1,stick='w',padx=5,pady=5)
-
-    def get_color(self, percentage) -> str:
-        if percentage >= 0:
-            return 'green'
-        return 'red'
-
-    def update_tickers(self,period):
-        self.update_ticker_dict(period)
