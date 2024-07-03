@@ -86,7 +86,7 @@ class GUI:
         ### Ticker plot button
         def plot_ticker(period:str='1D'):
             print(f'plot for ticker {ticker_entry.get()}')
-            self.plot_stock(self.stock_api.apiConfig,ticker_entry.get(),period,stock_history)
+            self.plot_stock(ticker_entry.get(),period,stock_history)
 
         plot_button = ctk.CTkButton(self.root,text='Plot',command=plot_ticker,width=input_rect_width,height=input_rect_height,fg_color=BG_WINDOW_COLOR)
         plot_button.place(x=left_right_width+margin*2+2*inner_margin+input_rect_width,y=margin+inner_margin-.5*margin)
@@ -110,8 +110,8 @@ class GUI:
         ### Bottom toolbar
         def on_toolbar_button_press(period):
             personal_ticker_window.update_tickers(self.stock_api,period)
-            #personal_ticker_window.create_grid(ticker_grid_frame)
             personal_ticker_window.update_grid()
+
             plot_ticker(period)
 
         toolbar = Toolbar(self.root,callback=on_toolbar_button_press)
@@ -119,15 +119,8 @@ class GUI:
     def init_canvas(self):
         self.canvas = None
 
-    def plot_stock(self,stock_api,ticker:str,period:int,frame):
-        data = {
-            'Date': pd.date_range(start='1/1/2020', periods=100),
-            'Open': pd.Series(range(100)) + 100,
-            'High': pd.Series(range(100)) + 105,
-            'Low': pd.Series(range(100)) + 95,
-            'Close': pd.Series(range(100)) + 100,
-            'Volume': pd.Series(range(100)) * 1000
-        }
+    def plot_stock(self,ticker:str,period:int,frame):
+        data = self.stock_api.get_data(ticker,period)
         # Pull data -> get_stock_data.py will check if we have it in db
         # daily will have to constantly be updated every time 1D gets pressed
 
@@ -135,14 +128,12 @@ class GUI:
         if self.canvas:
             self.canvas.get_tk_widget().destroy()
 
-        df = pd.DataFrame(data)
-        df.set_index('Date',inplace=True)
-
         fig,ax = plt.subplots(figsize=(6.9,4.7),facecolor='#393939')
+        ax.grid(True, which='both',linestyle='--',linewidth=0.5,color='gray')
         plt.title(f'{period} - {ticker}')
         ax = self.color_axis(ax)
 
-        mpf.plot(df,type='candle',ax=ax,mav=(3,6,9))
+        mpf.plot(data,type='candle',ax=ax,mav=(3,6,9))
 
         self.canvas = FigureCanvasTkAgg(fig,master=frame)
         self.canvas.get_tk_widget().pack_forget()
@@ -320,6 +311,11 @@ class TickerGrid(ctk.CTkFrame):
         # If not we can pull and add to DB
         for ticker in self.ticker_dict.keys():
             data = api.get_data(ticker,period)
+            if period =='1D':
+                data = api.get_yf_close(data)
+            else:
+                data = api.get_alpaca_close(data)
+
             self.ticker_dict[ticker] = float(api.calc_returns(data))
 
 

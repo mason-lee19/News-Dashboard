@@ -50,13 +50,11 @@ class GetStockData:
 
         if period == '1D':
             bars_df = yf.download(ticker,start=cur_date,interval='1m')
-            return self.get_yf_close(bars_df)
+        else:
+            startdate = Utils.calc_datetime(period)
+            bars_df = self.api.get_bars(ticker,timeframe='1D',start=startdate).df
         
-        startdate = Utils.calc_datetime(period)
-
-        bars_df = self.api.get_bars(ticker,timeframe='1D',start=startdate).df
-        
-        return self.get_alpaca_close(bars_df)
+        return bars_df
 
     def get_yf_close(self,df):
         return df['Close']
