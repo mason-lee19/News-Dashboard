@@ -110,7 +110,8 @@ class GUI:
         ### Bottom toolbar
         def on_toolbar_button_press(period):
             personal_ticker_window.update_tickers(self.stock_api,period)
-            personal_ticker_window.create_grid(ticker_grid_frame)
+            #personal_ticker_window.create_grid(ticker_grid_frame)
+            personal_ticker_window.update_grid()
             plot_ticker(period)
 
         toolbar = Toolbar(self.root,callback=on_toolbar_button_press)
@@ -310,6 +311,7 @@ class TickerGrid(ctk.CTkFrame):
         self.tickers = config.TICKERS
         #self.update_tickers()
         self.ticker_dict = {key:0 for key in self.tickers}
+        self.percentage_label = [0] * len(self.ticker_dict)
 
     def update_tickers(self,api,period:str='1D'):
         # check if we have the ticker data
@@ -319,8 +321,6 @@ class TickerGrid(ctk.CTkFrame):
         for ticker in self.ticker_dict.keys():
             data = api.get_data(ticker,period)
             self.ticker_dict[ticker] = float(api.calc_returns(data))
-            
-        print(self.ticker_dict)
 
 
     def create_grid(self,frame):
@@ -335,5 +335,13 @@ class TickerGrid(ctk.CTkFrame):
             ticker_label = tk.Label(frame, text=ticker,fg='white',padx=10,pady=5,bg=BG_WINDOW_COLOR)
             ticker_label.grid(row=row,column=col,sticky='w',padx=5,pady=5)
 
-            percentage_label=tk.Label(frame,text=f'{percentage:.2f}%', fg=Utils.get_color(percentage),bg=BG_WINDOW_COLOR)
-            percentage_label.grid(row=row, column=col+1,stick='w',padx=5,pady=5)
+            self.percentage_label[i]=tk.Label(frame,text=f'{percentage:.2f}%', fg=Utils.get_color(percentage),bg=BG_WINDOW_COLOR)
+            self.percentage_label[i].grid(row=row, column=col+1,stick='w',padx=5,pady=5)
+
+    def update_grid(self):
+
+        for i, (_,percentage) in enumerate(self.ticker_dict.items()):
+            if i == self.max_stock_num:
+                break
+
+            self.percentage_label[i].config(text=f'{percentage:.2f}%',fg=Utils.get_color(percentage))

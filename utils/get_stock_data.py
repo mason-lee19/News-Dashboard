@@ -54,7 +54,7 @@ class GetStockData:
         
         startdate = Utils.calc_datetime(period)
 
-        bars_df = self.api.get_bars(ticker,timeframe='1D',start=startdate,end=cur_date)
+        bars_df = self.api.get_bars(ticker,timeframe='1D',start=startdate).df
         
         return self.get_alpaca_close(bars_df)
 
