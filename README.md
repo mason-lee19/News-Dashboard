@@ -2,18 +2,18 @@
 
 This project is to setup the scripts necessary to extract, transform, and load financial news data and create an analytical dashboard.
 
-# Next Steps
+# Capabilities
 
-- Pulling Key words from headlines
-- Pulling which key words are publicly traded companies
-  - Tried implementing a NER trained on labeled news headlines, but no good data exisits, and I don't think it's needed
-  - I think I dictionary of companies in snp 500 will do just fine
-  - Maybe it's fine to companies and aliases for snp 500
-- Train sentiment model to analyze sentiment of headlines for column in data
-- Pushing transformed data to cloud db
-- Create script to auto pull from API every 1 hours, update db based on new headlines
+- Extract transform and upload digested financial news data
+  - Pull headline data from NewsAPI
+  - Digest and upload to SQL db in Google Cloud
+  - Key | Headline | Sentiment | Company | Keywords | Source | Date
+ 
+- Train and implement a sentiment model to analyze sentiment of headlines * Done
 
-- Create dashboard with newly updated data
+- headline_analyzer folder will contain all the necessary code to package and implement to a cron job in google cloud
+
+- Once data is uploaded, dashboard just needs to pull and process the data in order to summarize
 
 # Dashboard gui design
 
