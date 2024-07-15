@@ -15,6 +15,9 @@ This project is to setup the scripts necessary to extract, transform, and load f
 
 - Once data is uploaded, dashboard just needs to pull and process the data in order to summarize
 
+- Stock data will be pulled from yfinance and alpaca api to update tracked stocks on the dashboard * Done
+  - YF is used for daily data while alpaca is better for 2D - 5Yr, without a subscription we can't pull current day data from alpaca
+
 # Dashboard gui design
 
 ![Dashboard gui](attachments/News-Dash-GUI.png)
