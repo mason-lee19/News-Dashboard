@@ -25,10 +25,10 @@ def main():
 
     # Parse keywords for companies
 
-    # Get headline id through hashlib.sha256(headline.encode('utf-8')).hexdigest()
+    # Serialize headline through hashlib.sha256(headline.encode('utf-8')).hexdigest()
     # will create unique identifier based on headline so we can avoid adding duplicates
 
-    # headline_id | headline | sentiment | company | keywords |
+    # Key | Headline | Sentiment | Company | Keywords | Source | Date
 
     # Push new data to db file and upload
 

@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, TrainingArguments
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, TrainingArguments, Trainer
 import pickle
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -66,4 +66,5 @@ class SentimentModel():
     @staticmethod
     def load_model(file_path):
         with open(file_path, 'rb') as file:
-            return pickle.load(file)
+            model_state_dict, tokenizer = pickle.load(file)
+        model = AutoModelForSequenceClassification.from_pretrained('distil')
