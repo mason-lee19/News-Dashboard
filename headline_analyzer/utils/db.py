@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from google.cloud import storage
 import os
 import sqlite3
+import json
 
 @dataclass
 class DataBaseModelConfig:
@@ -12,7 +13,6 @@ class DataBaseModelConfig:
 class DataBaseSQLConfig:
     bucket_name: str
     db_file: str
-    url: str
     table_name: str
     local_db_path: str
 
@@ -36,10 +36,10 @@ class DataBaseModelHandler:
     def remove_local_blob(self) -> bool:
         try:
             os.remove(self.config.blob_name)
-            print(f'{self.config.blob_name} removed from dir')
+            print(f'[DB] {self.config.blob_name} removed from dir')
             return True
         except:
-            print(f'{self.config.blob_name} not found')
+            print(f'[DB] {self.config.blob_name} not found')
             return False
 
 class DataBaseSQLHandler:
@@ -55,15 +55,20 @@ class DataBaseSQLHandler:
 
         if self.blob.exists():
             self.blob.download_to_filename(self.config.local_db_path)
-            print(f'Downloaded {self.config.db_file} from bucket {self.config.bucket_name} to {self.config.local_db_path}')
+            print(f'[DB] Downloaded {self.config.db_file} from bucket {self.config.bucket_name} to {self.config.local_db_path}')
             return True
         
-        print(f'No database file found in bucket {self.config.bucket_name}')
+        print(f'[DB] No database file found in bucket {self.config.bucket_name}')
         return False
+
+    def push_db(self):
+        """Uploads db file back to google cloud"""
+        self.blob.upload_from_filename(self.config.local_db_path)
+        print(f'[DB] Uploaded {self.config.db_file} to {self.config.bucket_name}')
     
     def create_or_update_db(self, data=None):
         """Creates a new databse or updates the existing one"""
-        conn = sqlite3.connect(self.config.local_db_file)
+        conn = sqlite3.connect(self.config.local_db_path)
         cursor = conn.cursor()
 
         # Create a table if it doesn't exist
@@ -73,23 +78,26 @@ class DataBaseSQLHandler:
             Headline TEXT NOT NULL,
             Sentiment INTEGER NOT NULL,
             Company TEXT,
-            Keywords TEXT NOT NULL
+            Keywords TEXT NOT NULL,
+            Source TEXT,
+            Date DATE
            )
         ''')
 
+        print(f'[DB] Adding unique data to {self.config.table_name}')
         for _,rows in data.iterrows():
-            row_data = (rows['Key'],rows['Headline'],rows['Sentiment'],rows['Company'],rows['Keywords'])
+            row_data = (rows['key'],rows['headline'],rows['sentiment'],rows['company'],json.dumps(rows['keywords']),rows['source'],rows['date'])
 
             # Check if headline already exists based on Key
             cursor.execute(f'''
-                SELECT COUNT(*) FROM {self.config.table_name} WHERE Key = {rows['Key']}
-            ''')
+                SELECT COUNT(*) FROM {self.config.table_name} WHERE Key = ?
+            ''',(rows['key'],))
             if cursor.fetchone()[0] == 0:
                 cursor.execute(f'''
-                    INSERT INTO '{self.config.table_name}' (Key,Headline,Sentiment,Company,Keywords) VALUES {row_data}
-                ''')
+                    INSERT INTO '{self.config.table_name}' (Key,Headline,Sentiment,Company,Keywords,Source,Date) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''',row_data)
             else:
-                dup_headline = rows['Headline']
+                dup_headline = rows['headline']
                 print(f'Headline already exists: {dup_headline}')
 
         conn.commit()

@@ -1,6 +1,5 @@
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, TrainingArguments, Trainer
-import pickle
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -58,13 +57,3 @@ class SentimentModel():
             proba = torch.nn.functional.softmax(logits,dim=1).to('cpu').detach().numpy()
 
         return proba
-
-    def save_model(self, file_path):
-        with open(file_path, 'wb') as file:
-            pickle.dump(self, file)
-
-    @staticmethod
-    def load_model(file_path):
-        with open(file_path, 'rb') as file:
-            model_state_dict, tokenizer = pickle.load(file)
-        model = AutoModelForSequenceClassification.from_pretrained('distil')

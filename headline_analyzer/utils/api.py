@@ -4,11 +4,25 @@ from pathlib import Path
 from dotenv import load_dotenv
 import re
 import os
-import datetime
+from datetime import datetime
+import hashlib
+
+import nltk
+nltk.download('punkt')
+nltk.download('stopwords')
+
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
+HEADLINES_PER_PULL = 100
+
 
 class ApiHandler:
     def __init__(self):
         self.newsapi = self.get_client()
+        sp_data_df = pd.read_csv('sp500.csv')[['Name','Symbol']]
+        self.sp_dict = {row['Name'].lower().replace(' ',''):row['Symbol'] for _,row in sp_data_df.iterrows()}
+
 
     def get_client(self):
         '''Get API connection'''
@@ -25,21 +39,24 @@ class ApiHandler:
             country='us',
             category='business',
             language='en',
-            page_size=100
+            page_size=HEADLINES_PER_PULL
         )
 
         if len(top_us_headlines) == 0:
-            print('Something went wrong with the api pull, no data pulled')
+            print('[API] Something went wrong with the api pull, no data pulled')
             return []
 
         top_headlines = []
+        headline_dates = []
         for i in top_us_headlines['articles']:
-            top_headlines.append((i['title'],self.strip_date(i['publishedAt'])))
+            top_headlines.append(i['title'])
+            headline_dates.append(i['publishedAt'])
 
-        print(f'Returning {len(top_headlines)} top us headlines')
-        return top_headlines
+        print(f'[API] Returning {len(top_headlines)} top us headlines')
+        return pd.DataFrame(top_headlines,columns=['headline']), pd.DataFrame(headline_dates,columns=['date'])
 
-    def strip_date(self,raw_date):
+    @staticmethod
+    def strip_date(raw_date):
         '''Format raw date from API to y-m-d format'''
         dt = datetime.strptime(raw_date, '%Y-%m-%dT%H:%M:%SZ')
         return dt.strftime('%Y-%m-%d')
@@ -70,11 +87,31 @@ class ApiHandler:
         return tmp
 
     @staticmethod
-    def get_keywords(headline):
-        '''Pull and return list of keywords from headline'''
-        pass
+    def serialize_headline(headline):
+        '''Serialize headline to be used as key'''
+        headline_bytes = headline.encode('utf-8')
+
+        sha256_hash = hashlib.sha256()
+        sha256_hash.update(headline_bytes)
+
+        unique_key = sha256_hash.hexdigest()
+
+        return unique_key
 
     @staticmethod
-    def get_company(headline):
+    def get_keywords(headline):
+        '''Pull and return list of keywords from headline'''
+        stop_words = set(stopwords.words('english'))
+        word_tokens = word_tokenize(headline)
+        keywords = [word for word in word_tokens if word.isalpha() and word.lower not in stop_words]
+
+        return keywords
+
+    def get_company(self,keywords):
         '''Pull company mentions from headline'''
-        pass
+        for word in keywords:
+            if word in self.sp_dict:
+                return self.sp_dict[word]
+            elif word[:-1] in self.sp_dict:
+                return self.sp_dict[word[:-1]]
+        return 'general'
