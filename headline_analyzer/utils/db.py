@@ -35,11 +35,14 @@ class DataBaseModelHandler:
 
     def remove_local_blob(self) -> bool:
         try:
-            os.remove(self.config.blob_name)
-            print(f'[DB] {self.config.blob_name} removed from dir')
+            for filename in os.listdir(self.config.model_name):
+                file_path = os.path.join(self.config.model_name,filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                    print(f'[DB] {filename} removed from dir')
             return True
         except:
-            print(f'[DB] {self.config.blob_name} not found')
+            print(f'[DB] {self.config.model_name} not found')
             return False
 
 class DataBaseSQLHandler:

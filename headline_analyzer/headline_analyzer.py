@@ -4,11 +4,7 @@ This folder will serve as the code to collect headline data, analyze the sentime
 All code will be within this folder to differentiate for cron job upload.
 '''
 import os
-import requests
 
-from newsapi import NewsApiClient
-from pathlib import Path
-from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
 
@@ -22,8 +18,18 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "news-dashboard-428816-944234361d
 def main():
     # Check and setup Model
     print('[MAIN] Setting up Sentiment model')
+    modelConfig = DataBaseModelConfig(
+        bucket_name = 'news-sentiment-model',
+        model_name = 'sentiment_model'
+    )
+    modelHandler = DataBaseModelHandler(modelConfig)
+    modelHandler.download_blob()
+
     model = SentimentModel('sentiment_model')
     id2label = model.model.config.id2label
+
+    print('[MAIN] Model loaded: removing downloaded local model data')
+    modelHandler.remove_local_blob()
 
     # Pull new headline data
     print('[MAIN] Pulling headline data')
