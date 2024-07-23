@@ -23,17 +23,17 @@ class DataBaseModelHandler:
 
     def init_google_conn(self):
         client = storage.Client()
-        bucket = client.get_bucket(self.config.bucket_name)
-        self.blob = bucket.blob(self.config.model_name)
+        self.bucket = client.get_bucket(self.config.bucket_name)
 
-    def download_blob(self) -> bool:
-        if self.blob.exists():
-            self.blob.download_to_filename(self.config.model_name)
-            return True
-        else:
-            return False
+    def download_model(self,config) -> bool:
+        blobs = self.bucket.list_blobs(prefix=config.model_name)
 
-    def remove_local_blob(self) -> bool:
+        for blob in blobs:
+            blob.download_to_filename(blob.name)
+
+            print(f'[DB] Downloaded {blob.name} to {config.model_name}/')
+
+    def remove_local_model(self) -> bool:
         try:
             for filename in os.listdir(self.config.model_name):
                 file_path = os.path.join(self.config.model_name,filename)

@@ -15,7 +15,7 @@ from utils.model import SentimentModel
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "news-dashboard-428816-944234361d91.json"
 
-def main():
+def main(data=None, context=None):
     # Check and setup Model
     print('[MAIN] Setting up Sentiment model')
     modelConfig = DataBaseModelConfig(
@@ -23,13 +23,13 @@ def main():
         model_name = 'sentiment_model'
     )
     modelHandler = DataBaseModelHandler(modelConfig)
-    modelHandler.download_blob()
+    modelHandler.download_model(modelConfig)
 
     model = SentimentModel('sentiment_model')
     id2label = model.model.config.id2label
 
     print('[MAIN] Model loaded: removing downloaded local model data')
-    modelHandler.remove_local_blob()
+    modelHandler.remove_local_model()
 
     # Pull new headline data
     print('[MAIN] Pulling headline data')
