@@ -27,8 +27,7 @@ class ApiHandler:
     def get_client(self):
         '''Get API connection'''
         local_dir = os.path.dirname(os.path.abspath('__file__'))
-        parent_dir = os.path.dirname(local_dir)
-        api_env_filepath = os.path.join(parent_dir,'api.env')
+        api_env_filepath = os.path.join(local_dir,'news_api.env')
         load_dotenv(Path(api_env_filepath))
 
         return NewsApiClient(api_key=os.getenv('NEWSAPI_API_KEY'))

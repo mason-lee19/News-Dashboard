@@ -61,6 +61,13 @@ This portion is meant to go over how to setup a google cron job in order to forc
 - for code you can utilize the new bucket that contains zip of script
 - deploy script
 
+- tips:
+  - Do not zip the folder, zip the contents together
+    - It won't be able to find the main function
+  - Add 2 input parameters to main function (data=None, content=None)
+  - Watch out for invisible folders like \_\_pycache\_\_ or \_MACOSX this can cause issues, below command helps remove these
+    - > zip -r headline\*analyzer_v2.zip . -x "\*/\\.\*" -x "\*/\_\_MACOSX/\*" -x '.DS_Store' -x '\*/\_\_pycache\_\_/\*'
+
 4. Create cloud schedular
 
 - create new job

@@ -31,7 +31,7 @@ class SentimentModel():
     def __init__(self, model_path):
         self.model = AutoModelForSequenceClassification.from_pretrained(model_path).to(DEVICE)
 
-        args = TrainingArguments(output_dir='../Data/results', per_device_eval_batch_size=64)
+        args = TrainingArguments(output_dir='/tmp', per_device_eval_batch_size=64)
         self.batch_model = Trainer(model = self.model, args=args)
         self.single_dataloader = DataLoader()
 

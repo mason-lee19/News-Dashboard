@@ -14,6 +14,7 @@ from utils.model import SentimentModel
 
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "news-dashboard-428816-944234361d91.json"
+os.environ["TRANSFORMERS_CACHE"] = '/tmp'
 
 def main(data=None, context=None):
     # Check and setup Model
@@ -66,8 +67,6 @@ def main(data=None, context=None):
     # Parse keywords for companies
     print('[MAIN] Finding correlated companies')
     top_headlines['company'] = top_headlines['keywords'].apply(news_api.get_company)
-
-    top_headlines.to_csv('data.csv')
 
     # Pull cloud db file, update with new data, push new db file to cloud
     dbConfig = DataBaseSQLConfig(
