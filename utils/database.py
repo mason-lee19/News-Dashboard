@@ -1,8 +1,58 @@
-from sqlalchemy import create_engine
+from dataclasses import dataclass
+from google.cloud import storage
+import os
+import sqlite3
+import json
+import pandas as pd
 
-STOCK_RETURNS_DB_URL = 'sqlite:///db/stock_returns.db'
+@dataclass
+class DataBaseSQLConfig:
+    bucket_name: str
+    db_file: str
+    table_name: str
+    local_db_path: str
 
-class DB():
-    def __init__(self):
-        engine = create_engine(STOCK_RETURNS_DB_URL)
+class DataBaseSQLHandler:
+    def __init__(self,config):
+        self.config = config
+        self.download_db()
+
+    def download_db(self) -> bool:
+        """Inits connection to google cloud and downloads db file"""
+        client = storage.Client()
+        bucket = client.get_bucket(self.config.bucket_name)
+        self.blob = bucket.blob(self.config.db_file)
+
+        if self.blob.exists():
+            self.blob.download_to_filename(self.config.local_db_path)
+            print(f'[DB] Downloaded {self.config.db_file} from bucket {self.config.bucket_name} to {self.config.local_db_path}')
+            return True
         
+        print(f'[DB] No database file found in bucket {self.config.bucket_name}')
+        return False
+    
+    def pull_data(self) -> pd.DataFrame():
+        conn = sqlite3.connect(self.config.local_db_path)
+
+        df = pd.read_sql_query('SELECT * FROM headline_data LIMIT 50',conn)
+
+        if len(df) == 0:
+            print(f'[DB] Length of data from {self.config.local_db_path} is equal to 0')
+        else:
+            print(f'[DB] Pull from {self.config.local_db_path} successful')
+            print(f'Length of Data: {len(df)} rows')
+
+        conn.close()
+
+        return df
+
+
+
+dbConfig = DataBaseSQLConfig(
+    bucket_name='news-headline-data',
+    db_file='data.db',
+    table_name='headline_data',
+    local_db_path='db/data.db'
+    )
+
+dbHandler = DataBaseSQLHandler(dbConfig)
