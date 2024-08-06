@@ -9,8 +9,10 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import config
+import os
 from utils.get_stock_data import GetStockData
 from utils.tools import Utils
+from utils.database import DataBaseSQLConfig, DataBaseSQLHandler
 
 BORDER_COLOR = 'White'
 BORDER_THICKNESS = 2
@@ -18,6 +20,8 @@ BG_COLOR = 'gray15'
 BG_WINDOW_COLOR = 'gray17'
 
 DEFAULT_TIME_FRAME = '1D'
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "news-dashboard-428816-944234361d91.json"
 
 
 class GUI:
@@ -165,27 +169,57 @@ class ScrollWindow(ctk.CTkScrollableFrame):
 
         self.master = master
 
+        self.init_sql_connection()
+        
+
+    def init_sql_connection(self) -> bool:
+        dbConfig = DataBaseSQLConfig(
+            bucket_name='news-headline-data',
+            db_file='data.db',
+            table_name='headline_data',
+            local_db_path='utils/db/data.db'
+        )
+
+        self.dbHandler = DataBaseSQLHandler(dbConfig)
+        pulled_db = self.dbHandler.download_db()
+        if not pulled_db:
+            print(f'[Main] Unable to download database file {dbConfig.db_file} from bucket {dbConfig.bucket_name}')
+            return False
+
+        print(f'[Main] Successfully downloaded database file {dbConfig.db_file} from bucket {dbConfig.bucket_name}')
+        return True
+        
+
     def fill_with_headlines(self,frame):
         ### Will replace with db pull of headline data
-        headlines = [
-            'BA\nBoeing goes the absolute moon thank god',
-            'printing money just go easier with insurance fraud',
-            'Magnificent 7 is still a great investment even though we are headed for recession',
-            'Im hoping this tkinter thing works with long headlines',
-            'TSLA\nTesla is absolutely goated with the sauce',
-            'printing money just go easier with insurance fraud',
-            'Magnificent 7 is still a great investment even though we are headed for recession',
-            'Im hoping this tkinter thing works with long headlines',
-            'JD\nJohn Deer goes the absolute moon thank god',
-            'TSLA\nTesla is absolutely goated with the sauce',
-            'printing money just go easier with insurance fraud',
-            'Magnificent 7 is still a great investment even though we are headed for recession',
-            'Im hoping this tkinter thing works with long headlines',
-            'JD\nJohn Deer goes the absolute moon thank god',
-        ]
+        df = self.dbHandler.pull_data()
+
+        if len(df) == 0:
+            print(f'[Main] Something went wrong trying to pull data from db')
+            return
+        
+        # Headlines will follow this format
+        # (PubDate - Company\n Headline , Color)
+        # Color of headline will be determined from sentiment = (Green, Gray, Red)
+        headlines = []
+        sentiment_key = {
+            'positive': 'green',
+            'neutral': 'grey',
+            'negative': 'red'
+        }
+
+        for _,row in df.iterrows():
+            pubDate = row['Date']
+            comp = row['Company']
+            headline = row['Headline']
+            sentiment = row['Sentiment']
+
+            headline = str(pubDate + ' - ' + comp + '\n' + headline)
+
+            headlines.append((headline,sentiment_key[sentiment]))
 
         for item in headlines:
-            ctk.CTkLabel(frame,text=item,justify='left',wraplength=self.master.winfo_width()//6).pack(pady=4,anchor='w')
+            ctk.CTkLabel(frame,text=item[0],text_color=item[1],justify='left',wraplength=self.master.winfo_width()//6).pack(pady=4,anchor='w')
 
 
 class KeywordWindow(ctk.CTkFrame):

@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from google.cloud import storage
-import os
 import sqlite3
-import json
 import pandas as pd
 
 @dataclass
@@ -15,7 +13,6 @@ class DataBaseSQLConfig:
 class DataBaseSQLHandler:
     def __init__(self,config):
         self.config = config
-        self.download_db()
 
     def download_db(self) -> bool:
         """Inits connection to google cloud and downloads db file"""
@@ -34,25 +31,19 @@ class DataBaseSQLHandler:
     def pull_data(self) -> pd.DataFrame():
         conn = sqlite3.connect(self.config.local_db_path)
 
-        df = pd.read_sql_query('SELECT * FROM headline_data LIMIT 50',conn)
+        df = pd.read_sql_query(
+            '''SELECT * 
+            FROM headline_data 
+            ORDER BY Date DESC
+            LIMIT 50'''
+            ,conn)
 
         if len(df) == 0:
             print(f'[DB] Length of data from {self.config.local_db_path} is equal to 0')
         else:
             print(f'[DB] Pull from {self.config.local_db_path} successful')
-            print(f'Length of Data: {len(df)} rows')
+            print(f'[DB] Length of Data: {len(df)} rows')
 
         conn.close()
 
         return df
-
-
-
-dbConfig = DataBaseSQLConfig(
-    bucket_name='news-headline-data',
-    db_file='data.db',
-    table_name='headline_data',
-    local_db_path='db/data.db'
-    )
-
-dbHandler = DataBaseSQLHandler(dbConfig)

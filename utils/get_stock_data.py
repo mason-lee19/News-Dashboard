@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from .database import DB
 from .tools import Utils
 
 import os
@@ -23,9 +22,8 @@ class GetStockData:
 
         self.init_alpaca_api()
 
-        self.db = DB()
-
     def configure_alpaca_api(self) -> ApiConfig:
+        print('[SD] Getting API info from api.env file')
         local_dir = os.path.dirname(os.path.abspath('__file__'))
         config_file_path = os.path.join(local_dir,'api.env')
         load_dotenv(Path(config_file_path))
@@ -37,17 +35,12 @@ class GetStockData:
         return apiConfig
 
     def init_alpaca_api(self):
+        print('[SD] Initializing trade api')
         self.api = tradeapi.REST(self.apiConfig.api_key, self.apiConfig.api_secret, self.apiConfig.base_url, api_version='v2')
-
-    def pull_db_data(self,ticker,period):
-        pass
-
-    def add_db_data(self,ticker):
-        pass
 
     def get_data(self,ticker:str,period:str):
         cur_date = Utils.get_cur_date()
-
+        
         if period == '1D':
             bars_df = yf.download(ticker,start=cur_date,interval='1m')
         else:
