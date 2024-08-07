@@ -4,20 +4,33 @@ This project is to setup the scripts necessary to extract, transform, and load f
 
 # Capabilities
 
+### In progress
+
+- Analyze Keywords column to analyze latest keyword trends
+
+- Grab latest companies and current day return and place in bottom left window
+
+### Finished Capabilites
+
 - Extract transform and upload digested financial news data
 
   - Pull headline data from NewsAPI
   - Digest and upload to SQL db in Google Cloud
   - Key | Headline | Sentiment | Company | Keywords | Source | Date
 
-- Train and implement a sentiment model to analyze sentiment of headlines \* Done
+- Train and implement a sentiment model to analyze sentiment of headlines
 
 - headline_analyzer folder will contain all the necessary code to package and implement to a cron job in google cloud
 
 - Once data is uploaded, dashboard just needs to pull and process the data in order to summarize
 
-- Stock data will be pulled from yfinance and alpaca api to update tracked stocks on the dashboard \* Done
+- Analyze Keywords column to analyze latest keyword trends
+
+- Stock data will be pulled from yfinance and alpaca api to update tracked stocks on the dashboard
+
   - YF is used for daily data while alpaca is better for 2D - 5Yr, without a subscription we can't pull current day data from alpaca
+
+- FED data is scraped from https://fred.stlouisfed.org/series/{series_id}
 
 # Dashboard gui design
 
