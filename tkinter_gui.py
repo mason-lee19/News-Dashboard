@@ -10,6 +10,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import config
 import os
+import requests
+from bs4 import BeautifulSoup
+
 from utils.get_stock_data import GetStockData
 from utils.tools import Utils
 from utils.database import DataBaseSQLConfig, DataBaseSQLHandler
@@ -78,10 +81,12 @@ class GUI:
 
         keyword_grid.fill_with_keywords(keyword_grid)
 
-        ### Call Volume or top keyword window
-        top_keywords = tk.Frame(self.root, width=left_right_width, height=left_right_small_height,
-                                highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
-        top_keywords.place(x=self.width - left_right_width - margin, y=margin + left_right_large_height + inner_margin)
+        ### FED Data window
+        #fed_window = FedTabView(self.root, width=left_right_width, height=left_right_small_height, highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
+        fed_window = FedTabView(self.root, width=left_right_width, height=left_right_small_height)
+        
+        fed_window.place(x=self.width - left_right_width - margin, y=margin + left_right_large_height + inner_margin)
+        #fed_window.fill_with_fed_data(fed_window)
 
         ### Ticker input
         ticker_entry = ctk.CTkEntry(self.root,width=input_rect_width,height=input_rect_height)
@@ -272,6 +277,56 @@ class KeywordWindow(ctk.CTkFrame):
             ax.set_axis_off()
             plt.savefig(filename,bbox_inches='tight',pad_inches=0,facecolor='#292929')
             plt.close(fig)
+
+class FedTabView(ctk.CTkTabview):
+    def __init__(self,master=None,**kwargs):
+        super().__init__(master,**kwargs)
+
+        self.master = master
+
+        self.create_tabs()
+
+    def create_tabs(self):
+        self.add("GDP")
+        self.add("UNRATE")
+        self.add("CPI")
+        self.add("FED")
+
+        self.fill_tab_with_data(self.tab("GDP"),"GDP")
+        self.fill_tab_with_data(self.tab("UNRATE"),"UNRATE")
+        self.fill_tab_with_data(self.tab("CPI"), "CPIAUCSL")
+        self.fill_tab_with_data(self.tab("FED"), "FEDFUNDS")
+
+    def fetch_fed_data(self,series_id):
+        url = f'https://fred.stlouisfed.org/series/{series_id}'
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content,'html.parser')
+
+        table = soup.find('table',{'class':'table'})
+        rows = []
+
+        for tr in table.find_all('tr')[1:]:
+            cells = [td.get_text() for td in tr.find_all('td')]
+            rows.append(cells)
+
+        df = pd.DataFrame(rows[:-1],columns=['Date','Value','na'])
+        return df[['Date','Value']]
+
+    def fill_tab_with_data(self,tab,series_id):
+        data = self.fetch_fed_data(series_id)
+        tree = ttk.Treeview(tab)
+
+        tree["columns"] = list(data.columns)
+        tree["show"] = "headings"
+
+        for column in data.columns:
+            tree.heading(column,text=column)
+            tree.column(column,width=100)
+
+        for _,row in data.iterrows():
+            tree.insert("","end",values=list(row))
+
+        tree.pack(expand=False,fill='both')
 
 
 class HighlightButton(ctk.CTkButton):
