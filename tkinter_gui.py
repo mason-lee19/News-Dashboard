@@ -12,6 +12,7 @@ import config
 import os
 import requests
 from bs4 import BeautifulSoup
+import re
 
 from utils.get_stock_data import GetStockData
 from utils.tools import Utils
@@ -61,38 +62,38 @@ class GUI:
         left_right_large_height = (self.height - 2 * margin - inner_margin) * 2 // 3
         left_right_small_height = (self.height - 2 * margin - inner_margin) // 3
 
-        ### Headline scroll window
+        # Init SQL Connection
+        dbHandler = self.init_sql_connection()
+
+        ### Headline scroll window -----------------------------------------
         headline_window = ScrollWindow(self.root, label_text='Headlines', width=left_right_width-inner_margin, height=left_right_large_height-(inner_margin*6), 
                                                border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
         headline_window.place(x=margin, y=margin)
+        headline_window.set_sql_handler(dbHandler)
         headline_window.fill_with_headlines(headline_window)
 
-        ### Portfolio based on headline ticker activity
+        ### Portfolio based on headline ticker activity -----------------------------------------
         headline_portfolio = tk.Frame(self.root, width=left_right_width, height=left_right_small_height, 
                                       highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         headline_portfolio.place(x=margin, y=margin + left_right_large_height + inner_margin)
 
-        ### Keyword monitor window
-        keyword_window = KeywordWindow(self.root, width=left_right_width+inner_margin, height=left_right_large_height,
-                                       border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
-        keyword_window.place(x=self.width - left_right_width - margin - inner_margin, y=margin)
-        keyword_grid = KeywordWindow(self.root, width=left_right_width-inner_margin-10, height=left_right_large_height-(inner_margin*2)-10)
-        keyword_grid.place(x=self.width - left_right_width - margin, y=margin + 10)
+        ### Keyword monitor window -----------------------------------------
+        keyword_window = ScrollWindow(self.root, label_text='Past 5 days Keywords', width=left_right_width-inner_margin, height=left_right_large_height-(inner_margin*6), border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
+        keyword_window.place(x=self.width - left_right_width - margin - 2*inner_margin, y=margin)
+        keyword_window.set_sql_handler(dbHandler)
+        keyword_window.fill_with_keywords(keyword_window)
 
-        keyword_grid.fill_with_keywords(keyword_grid)
-
-        ### FED Data window
-        #fed_window = FedTabView(self.root, width=left_right_width, height=left_right_small_height, highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
+        ### FED Data window -----------------------------------------
         fed_window = FedTabView(self.root, width=left_right_width, height=left_right_small_height)
         
         fed_window.place(x=self.width - left_right_width - margin, y=margin + left_right_large_height + inner_margin)
         #fed_window.fill_with_fed_data(fed_window)
 
-        ### Ticker input
+        ### Ticker input -----------------------------------------
         ticker_entry = ctk.CTkEntry(self.root,width=input_rect_width,height=input_rect_height)
         ticker_entry.place(x=left_right_width+margin*2+inner_margin,y=margin + inner_margin - .5 * margin)
 
-        ### Ticker plot button
+        ### Ticker plot button 
         def plot_ticker(period:str='1D'):
             print(f'plot for ticker {ticker_entry.get()}')
             self.plot_stock(ticker_entry.get(),period,stock_history)
@@ -100,7 +101,7 @@ class GUI:
         plot_button = ctk.CTkButton(self.root,text='Plot',command=plot_ticker,width=input_rect_width,height=input_rect_height,fg_color=BG_WINDOW_COLOR)
         plot_button.place(x=left_right_width+margin*2+2*inner_margin+input_rect_width,y=margin+inner_margin-.5*margin)
 
-        ### Ticker history viewer
+        ### Ticker history viewer -----------------------------------------
         stock_history = tk.Frame(self.root, width=center_width, height=large_rect_height - 1 * margin,
                                  highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
         stock_history.place(x=left_right_width + margin*2 + inner_margin, y=margin + inner_margin + 1 * margin)
@@ -166,18 +167,8 @@ class GUI:
 
         return ax
 
-
-
-class ScrollWindow(ctk.CTkScrollableFrame):
-    def __init__(self,master=None,**kwargs):
-        super().__init__(master,**kwargs)
-
-        self.master = master
-
-        self.init_sql_connection()
-        
-
-    def init_sql_connection(self) -> bool:
+    @staticmethod
+    def init_sql_connection():
         dbConfig = DataBaseSQLConfig(
             bucket_name='news-headline-data',
             db_file='data.db',
@@ -185,22 +176,30 @@ class ScrollWindow(ctk.CTkScrollableFrame):
             local_db_path='utils/db/data.db'
         )
 
-        self.dbHandler = DataBaseSQLHandler(dbConfig)
-        pulled_db = self.dbHandler.download_db()
+        dbHandler = DataBaseSQLHandler(dbConfig)
+        pulled_db = dbHandler.download_db()
         if not pulled_db:
             print(f'[Main] Unable to download database file {dbConfig.db_file} from bucket {dbConfig.bucket_name}')
-            return False
+            return None
 
         print(f'[Main] Successfully downloaded database file {dbConfig.db_file} from bucket {dbConfig.bucket_name}')
-        return True
-        
+        return dbHandler
+
+class ScrollWindow(ctk.CTkScrollableFrame):
+    def __init__(self,master=None,**kwargs):
+        super().__init__(master,**kwargs)
+
+        self.master = master
+
+    def set_sql_handler(self,handler):
+        self.dbHandler = handler
 
     def fill_with_headlines(self,frame):
         ### Will replace with db pull of headline data
-        df = self.dbHandler.pull_data()
+        df = self.dbHandler.pull_headlines()
 
         if len(df) == 0:
-            print(f'[Main] Something went wrong trying to pull data from db')
+            print(f'[Main] Something went wrong trying to pull headline data from db')
             return
         
         # Headlines will follow this format
@@ -226,57 +225,40 @@ class ScrollWindow(ctk.CTkScrollableFrame):
         for item in headlines:
             ctk.CTkLabel(frame,text=item[0],text_color=item[1],justify='left',wraplength=self.master.winfo_width()//6).pack(pady=4,anchor='w')
 
-
-class KeywordWindow(ctk.CTkFrame):
-
-    def __init__(self,master=None,**kwargs):
-        super().__init__(master,**kwargs)
-
-        self.master = master
-
-        self.image_refs = []
-
     def fill_with_keywords(self,frame):
-        ### Will replace with db pull of headline data
-        # Create seperate graph check, and do proper os cleanup of that image and create another
-        # Segmentation fault due to self.create_chart writing over already created same name pngs
-        keywords = {
-            'nvidia':[1,2,4,6,3,2,1],
-            'mason':[5,2,3,5,6,8],
-            'russia':[9,7,4,1,2,3],
-            'yemen':[4,6,1,3,7,8],
-            'flu':[7,5,2,4,5,1],
-        }
+        df = self.dbHandler.pull_keywords()
 
+        if len(df) == 0:
+            print(f'[Main] Something went wrong trying to pull keyword data from db')
+            return
 
-        for i, (word,data) in enumerate(keywords.items()):
-            keyword_label = tk.Label(frame,text=word,justify='left',bg=BG_WINDOW_COLOR)
-            keyword_label.grid(row=i,column=0,stick='w',padx=5,pady=5)
-            
-            graph_image = f'attachments/graph_{i}.png'
+        keyword_counts = self.get_keyword_counts(df)
+        keyword_counts = keyword_counts.sort_values(by='Count',ascending=False)
 
-            #self.create_chart(data,graph_image)
-            img = Image.open(graph_image)
-            img = ImageTk.PhotoImage(img)
+        def clean_keyword(keyword):
+            return re.sub(r'\W+','',keyword)
 
-            self.image_refs.append(img)
-            
-            graph_label = tk.Label(frame,image=img,bg=BG_WINDOW_COLOR)
-            graph_label.image = img
-            graph_label.grid(row=i,column=1,stick='w',padx=10,pady=5)
-            
-            value_label = tk.Label(frame,text=str(keywords[word][-1]),justify='left',bg=BG_WINDOW_COLOR)
-            value_label.grid(row=i,column=3,stick='w',padx=5,pady=5)
+        keyword_counts['Keywords'] = keyword_counts['Keywords'].apply(clean_keyword)
+        
+        lines = []
+        for _,row in keyword_counts.iterrows():
+            if row['Keywords'] not in config.IGNORABLE_KEYWORDS:
+                lines.append(row['Keywords'] + ' - ' + str(row['Count']))
 
-            
+        for word in lines[0:100]:
+            ctk.CTkLabel(frame,text=word,justify='left',wraplength=self.master.winfo_width()//6).pack(pady=1,anchor='w')
+        
+    @staticmethod
+    def get_keyword_counts(df):
+        def process_keywords(row):
+            return [keyword.strip() for keyword in row.split(',')]
 
-    def create_chart(self,data,filename):
-            color = 'green' if data[0] <= data[-1] else 'red'
-            fig,ax = plt.subplots(figsize=(1,0.4))
-            ax.bar(range(len(data)),data,color=color)
-            ax.set_axis_off()
-            plt.savefig(filename,bbox_inches='tight',pad_inches=0,facecolor='#292929')
-            plt.close(fig)
+        df['Keywords'] = df['Keywords'].apply(process_keywords)
+
+        flattened_df = df.explode('Keywords')
+        keyword_counts = flattened_df.groupby(['Keywords']).size().reset_index(name='Count')
+
+        return keyword_counts
 
 class FedTabView(ctk.CTkTabview):
     def __init__(self,master=None,**kwargs):
