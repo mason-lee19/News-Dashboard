@@ -17,10 +17,12 @@ class ApiConfig:
     base_url: str
 
 class GetStockData:
-    def __init__(self):
-        self.apiConfig = self.configure_alpaca_api()
+    def __init__(self,initAlpaca):
+        if initAlpaca:
+            self.apiConfig = self.configure_alpaca_api()
 
-        self.init_alpaca_api()
+            self.init_alpaca_api()
+        
 
     def configure_alpaca_api(self) -> ApiConfig:
         print('[SD] Getting API info from api.env file')
@@ -58,5 +60,14 @@ class GetStockData:
     def calc_returns(self,data):
         # When pulling from DB need to remember to do the same datetime calc
         return ((data.iloc[-1] - data.iloc[0])/data.iloc[0])*100
+
+    @staticmethod
+    def get_put_call_ratio(ticker):
+        options_data = yf.Ticker(ticker).option_chain()
+        calls = options_data.calls
+        puts = options_data.puts
+
+        return puts['volume'].sum() / calls['volume'].sum()
+
 
     

@@ -32,7 +32,7 @@ class GUI:
     def __init__(self,root):
         self.root = root
 
-        self.stock_api = GetStockData()
+        self.stock_api = GetStockData(True)
 
         self.setup_gui()
     def setup_gui(self):
@@ -130,6 +130,8 @@ class GUI:
         self.canvas = None
 
     def plot_stock(self,ticker:str,period:int,frame):
+        if ticker == '':
+            return
         data = self.stock_api.get_data(ticker,period)
         # Pull data -> get_stock_data.py will check if we have it in db
         # daily will have to constantly be updated every time 1D gets pressed
@@ -391,7 +393,9 @@ class TickerGrid(ctk.CTkFrame):
 
 
     def create_grid(self,frame):
-        
+
+        yf = GetStockData(False)
+
         for i, (ticker,percentage) in enumerate(self.ticker_dict.items()):
             # Only allow certain number of stocks
             if i == self.max_stock_num:
@@ -402,13 +406,15 @@ class TickerGrid(ctk.CTkFrame):
             ticker_label = tk.Label(frame, text=ticker,fg='white',padx=10,pady=5,bg=BG_WINDOW_COLOR)
             ticker_label.grid(row=row,column=col,sticky='w',padx=5,pady=5)
 
-            self.percentage_label[i]=tk.Label(frame,text=f'{percentage:.2f}%', fg=Utils.get_color(percentage),bg=BG_WINDOW_COLOR)
+            self.percentage_label[i]=tk.Label(frame,text=f'{percentage:.2f}% - {yf.get_put_call_ratio(ticker):.2f}', fg=Utils.get_color(percentage),bg=BG_WINDOW_COLOR)
             self.percentage_label[i].grid(row=row, column=col+1,stick='w',padx=5,pady=5)
 
     def update_grid(self):
 
-        for i, (_,percentage) in enumerate(self.ticker_dict.items()):
+        yf = GetStockData(False)
+
+        for i, (ticker,percentage) in enumerate(self.ticker_dict.items()):
             if i == self.max_stock_num:
                 break
 
-            self.percentage_label[i].config(text=f'{percentage:.2f}%',fg=Utils.get_color(percentage))
+            self.percentage_label[i].config(text=f'{percentage:.2f}% - {yf.get_put_call_ratio(ticker):.2f}',fg=Utils.get_color(percentage))

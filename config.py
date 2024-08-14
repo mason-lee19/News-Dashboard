@@ -14,6 +14,9 @@ TICKERS = [
     'WDC',
     'COST',
     'SPR',
+    'CRWD',
+    'BLND',
+    'VIXY'
 ]
 
 IGNORABLE_KEYWORDS = [
@@ -43,6 +46,22 @@ IGNORABLE_KEYWORDS = [
     "could",
     "but",
     "from",
-    "you"
+    "you",
+    "with",
+    "than",
+    "by",
+    "heres",
+    "how",
+    "was",
+    "out",
+    "he",
+    "so",
+    "if",
+    "say",
+    "just",
+    "while",
+    "why",
+    "this",
+    "that"
 ]
 IGNORABLE_KEYWORDS = set(IGNORABLE_KEYWORDS)
