@@ -72,10 +72,11 @@ class GUI:
         headline_window.set_sql_handler(dbHandler)
         headline_window.fill_with_headlines(headline_window)
 
-        ### Portfolio based on headline ticker activity -----------------------------------------
-        headline_portfolio = tk.Frame(self.root, width=left_right_width, height=left_right_small_height, 
-                                      highlightthickness=BORDER_THICKNESS, highlightbackground=BORDER_COLOR)
-        headline_portfolio.place(x=margin, y=margin + left_right_large_height + inner_margin)
+        ### Major Index plot and Put/Call Ratio -----------------------------------------
+        major_index_summary = IndexTabView(self.root, width=left_right_width,height=left_right_small_height)
+        major_index_summary.set_api(self.stock_api)
+        major_index_summary.place(x=margin, y=margin + left_right_large_height + inner_margin)
+        major_index_summary.plot_data()
 
         ### Keyword monitor window -----------------------------------------
         keyword_window = ScrollWindow(self.root, label_text='Past 5 days Keywords', width=left_right_width-inner_margin, height=left_right_large_height-(inner_margin*6), border_width=BORDER_THICKNESS, border_color=BORDER_COLOR)
@@ -145,7 +146,7 @@ class GUI:
         plt.title(f'{period} - {ticker}')
         ax = self.color_axis(ax)
 
-        mpf.plot(data,type='candle',ax=ax,mav=(3,6,9))
+        mpf.plot(data,style='yahoo',ax=ax)
 
         self.canvas = FigureCanvasTkAgg(fig,master=frame)
         self.canvas.get_tk_widget().pack_forget()
@@ -272,14 +273,14 @@ class FedTabView(ctk.CTkTabview):
 
     def create_tabs(self):
         self.add("GDP")
-        self.add("UNRATE")
+        self.add("UnRate")
         self.add("CPI")
-        self.add("FED")
+        self.add("FedRate")
 
         self.fill_tab_with_data(self.tab("GDP"),"GDP")
-        self.fill_tab_with_data(self.tab("UNRATE"),"UNRATE")
-        self.fill_tab_with_data(self.tab("CPI"), "CPIAUCSL")
-        self.fill_tab_with_data(self.tab("FED"), "FEDFUNDS")
+        self.fill_tab_with_data(self.tab("UnRate"),"UNRATE")
+        self.fill_tab_with_data(self.tab("CPI"), "USACPALTT01CTGYM")
+        self.fill_tab_with_data(self.tab("FedRate"), "EFFR")   
 
     def fetch_fed_data(self,series_id):
         url = f'https://fred.stlouisfed.org/series/{series_id}'
@@ -312,6 +313,47 @@ class FedTabView(ctk.CTkTabview):
 
         tree.pack(expand=False,fill='both')
 
+class IndexTabView(ctk.CTkTabview):
+    def __init__(self,master=None,**kwargs):
+        super().__init__(master,**kwargs)
+
+        self.master = master
+
+        self.create_tabs()
+
+    def set_api(self,stock_api):
+        self.stock_api = stock_api
+
+    def create_tabs(self):
+        self.add("SPY")
+        self.add("NASDAQ")
+        self.add("DOW")
+        self.add("VIXY")
+        
+    def plot_data(self):
+        self.fill_tab_with_data(self.tab("SPY"),"SPY")
+        self.fill_tab_with_data(self.tab("NASDAQ"),"QQQ")
+        self.fill_tab_with_data(self.tab("DOW"), "DIA")
+        self.fill_tab_with_data(self.tab("VIXY"), "VIXY")
+        
+
+    def fill_tab_with_data(self,tab,ticker):
+        close_data = self.stock_api.get_data(ticker,'3M')
+        putcall_ratio = self.stock_api.get_put_call_ratio(ticker)
+
+        fig,ax = plt.subplots(figsize=(1.7,1.7),facecolor='#393939')
+        ax.grid(True, which='both',linestyle='--',linewidth=0.5,color='gray')
+        plt.title(f'{ticker} - P/C: {putcall_ratio:.2f}',fontsize=8)
+
+        custom_style = mpf.make_mpf_style(base_mpf_style='yahoo', rc={'axes.labelsize': 6, 'xtick.labelsize': 6, 'ytick.labelsize': 6, 'xtick.labelsize': 6, 'ytick.labelsize': 6})
+
+        mpf.plot(close_data,style=custom_style,ax=ax)
+
+        self.canvas = FigureCanvasTkAgg(fig,master=tab)
+        self.canvas.get_tk_widget().pack_forget()
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill=ctk.BOTH,expand=True)
+        
 
 class HighlightButton(ctk.CTkButton):
     def __init__(self,master=None,command=None,**kwargs):
