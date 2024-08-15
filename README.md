@@ -6,10 +6,6 @@ This project is to setup the scripts necessary to extract, transform, and load f
 
 ### In progress
 
-- Analyze Keywords column to analyze latest keyword trends
-
-- Grab latest companies and current day return and place in bottom left window
-
 ### Finished Capabilites
 
 - Extract transform and upload digested financial news data
@@ -32,9 +28,31 @@ This project is to setup the scripts necessary to extract, transform, and load f
 
 - FED data is scraped from https://fred.stlouisfed.org/series/{series_id}
 
+- Analyze Keywords column to analyze latest keyword trends
+
+- Grab major indices and calculate their 3M return and Put/Call ratio and place in bottom left window
+
 # Dashboard gui design
 
 ![Dashboard gui](attachments/News-Dash-GUI.png)
+
+# Finalized gui design and walkthrough
+
+![Final gui design](attachments/FinalGui.png)
+
+1. Latest 50 major headlines analyzed for sentiment and pulled topic stock (if applicable)
+2. Plot area to type in tickers and analyze overall signal
+3. Past 5 days keywords is pulled from major headline keywords and counted
+4. Plots the 3 month signal and put call ratio of major indices
+5. Portfolio return and put/call ratio display
+
+- Update the portfolio stocks within config.py
+
+6. Timeframe adjuster
+
+- Updates both plot area and portfolio return window
+
+7. Fed indicators last 4 quarters
 
 # Headline Data ETL Script
 
